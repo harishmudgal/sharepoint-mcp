@@ -1,0 +1,25 @@
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore local virtual environments
+.venv/
+env/
+venv/
+ENV/
+
+# Ignore sensitive local secrets and environment files
+.env
+.azure
+.git
+.gitignore
+
+# Ignore local IDE settings
+.vscode/
+.idea/
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
