@@ -69,9 +69,17 @@ def main():
 
 
 # Main execution
+#if __name__ == "__main__":
+#    try:
+#        main()
+#    except Exception as e:
+#        logger.error(f"Fatal error in SharePoint MCP server: {e}")
+#        sys.exit(1)
+
+
+# ... (keep all the existing tool definitions like @mcp.tool) ...
+
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        logger.error(f"Fatal error in SharePoint MCP server: {e}")
-        sys.exit(1)
+    # This enables the HTTP/SSE endpoint required by Azure & Copilot
+    mcp.run(transport='sse')
+
