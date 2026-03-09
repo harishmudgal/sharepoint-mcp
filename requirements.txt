@@ -11,3 +11,4 @@ mcp[cli]
 httpx
 beautifulsoup4
 uvicorn
+starlette
