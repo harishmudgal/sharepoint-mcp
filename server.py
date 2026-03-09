@@ -81,5 +81,6 @@ def main():
 
 if __name__ == "__main__":
     # This enables the HTTP/SSE endpoint required by Azure & Copilot
-    mcp.run(transport='sse')
+    mcp.run(transport='sse', host='0.0.0.0', port=8000)
+
 
