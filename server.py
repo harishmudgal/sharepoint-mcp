@@ -1,48 +1,68 @@
 import os
-import uvicorn
+import sys
+import logging
+from pathlib import Path
 from fastmcp import FastMCP
 from dotenv import load_dotenv
 
-# 1. Import the specific manager class from your fork
-# If your fork uses a different name, check 'sharepoint_mcp/sharepoint.py'
-from sharepoint_mcp.sharepoint import SharePointManager 
+# --- FIX: Ensure Python finds the local package ---
+# This adds the current folder to the search path to prevent ModuleNotFoundError
+current_dir = Path(__file__).parent.absolute()
+if str(current_dir) not in sys.path:
+    sys.path.insert(0, str(current_dir))
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("sharepoint-mcp-copilot")
 
 load_dotenv()
 
-# 2. Initialize FastMCP (Required for Streamable HTTP in Azure)
-mcp = FastMCP(
-    "SharePoint-MCP",
-    dependencies=["msal", "httpx", "pandas", "python-docx", "PyPDF2", "openpyxl"]
-)
+# --- INITIALIZE FASTMCP ---
+# This enables Streamable HTTP required for Copilot Studio
+mcp = FastMCP("SharePoint-MCP")
 
-# 3. Initialize the Repo's Graph Logic
-# These variables MUST be set in your Azure Container App environment
-sp_logic = SharePointManager(
-    client_id=os.getenv("AZURE_CLIENT_ID"),
-    client_secret=os.getenv("AZURE_CLIENT_SECRET"),
-    tenant_id=os.getenv("AZURE_TENANT_ID")
-)
+# --- INITIALIZE REPO LOGIC ---
+# We use a try-except to catch import errors if the folder structure varies
+try:
+    # Based on the fork structure, the main logic is typically in these paths:
+    # Option A: from sharepoint_mcp.server import SharePointServer
+    # Option B: from server import SharePointServer (if it's a flat structure)
+    from sharepoint_mcp.mcp_server import SharePointServer
+    
+    sp_logic = SharePointServer(
+        client_id=os.getenv("AZURE_CLIENT_ID"),
+        tenant_id=os.getenv("AZURE_TENANT_ID"),
+        client_secret=os.getenv("AZURE_CLIENT_SECRET")
+    )
+    logger.info("Successfully loaded SharePointServer logic from fork.")
+except ImportError as e:
+    logger.error(f"Import failed: {e}. Check if folder '__init__.py' is missing.")
+    sp_logic = None
 
-# 4. Expose the "Missing" Graph features as Copilot Tools
+# --- REGISTER TOOLS FOR COPILOT ---
 @mcp.tool()
-async def search_files(query: str) -> str:
-    """Search for documents and files across all SharePoint sites."""
-    # Calls the internal implementation in the git repo
-    return await sp_logic.search_files(query)
+async def search_sharepoint(query: str) -> str:
+    """Search for documents and content across SharePoint sites."""
+    if not sp_logic: return "Server logic not initialized."
+    return await sp_logic.search(query)
 
 @mcp.tool()
 async def list_sites() -> str:
-    """Lists SharePoint sites the current application has access to."""
+    """Retrieve all accessible SharePoint sites."""
+    if not sp_logic: return "Server logic not initialized."
     return await sp_logic.get_sites()
 
 @mcp.tool()
-async def get_document_body(site_id: str, file_id: str) -> str:
-    """Downloads and extracts text from Word, PDF, or Excel files."""
-    return await sp_logic.get_file_content(site_id, file_id)
+async def get_file_content(drive_id: str, file_id: str) -> str:
+    """Read content from SharePoint files (PDF, DOCX, XLSX)."""
+    if not sp_logic: return "Server logic not initialized."
+    return await sp_logic.get_file(drive_id, file_id)
 
-# 5. Export the ASGI app for Azure/Uvicorn
+# --- EXPORT FOR AZURE ---
+# This 'app' is what Uvicorn will serve on port 8000
 app = mcp.get_asgi_app()
 
 if __name__ == "__main__":
-    # Local test command: python server.py
-    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)
+    # Local debugging
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
