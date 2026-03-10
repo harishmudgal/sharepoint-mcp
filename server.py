@@ -1,68 +1,63 @@
-import os
+"""Main implementation of the SharePoint MCP Server."""
+
 import sys
 import logging
-from pathlib import Path
-from fastmcp import FastMCP
-from dotenv import load_dotenv
+from contextlib import asynccontextmanager
+from collections.abc import AsyncIterator
+from datetime import datetime, timedelta
 
-# --- FIX: Ensure Python finds the local package ---
-# This adds the current folder to the search path to prevent ModuleNotFoundError
-current_dir = Path(__file__).parent.absolute()
-if str(current_dir) not in sys.path:
-    sys.path.insert(0, str(current_dir))
+from mcp.server.fastmcp import FastMCP
 
-# Setup logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("sharepoint-mcp-copilot")
+from auth.sharepoint_auth import SharePointContext, get_auth_context
+from config.settings import APP_NAME, DEBUG
+from tools.site_tools import register_site_tools
 
-load_dotenv()
+# Set logging level
+logging_level = logging.DEBUG if DEBUG else logging.INFO
+logging.basicConfig(
+    level=logging_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger("sharepoint_mcp")
 
-# --- INITIALIZE FASTMCP ---
-# This enables Streamable HTTP required for Copilot Studio
-mcp = FastMCP("SharePoint-MCP")
 
-# --- INITIALIZE REPO LOGIC ---
-# We use a try-except to catch import errors if the folder structure varies
-try:
-    # Based on the fork structure, the main logic is typically in these paths:
-    # Option A: from sharepoint_mcp.server import SharePointServer
-    # Option B: from server import SharePointServer (if it's a flat structure)
-    from sharepoint_mcp.mcp_server import SharePointServer
-    
-    sp_logic = SharePointServer(
-        client_id=os.getenv("AZURE_CLIENT_ID"),
-        tenant_id=os.getenv("AZURE_TENANT_ID"),
-        client_secret=os.getenv("AZURE_CLIENT_SECRET")
-    )
-    logger.info("Successfully loaded SharePointServer logic from fork.")
-except ImportError as e:
-    logger.error(f"Import failed: {e}. Check if folder '__init__.py' is missing.")
-    sp_logic = None
+@asynccontextmanager
+async def sharepoint_lifespan(server: FastMCP) -> AsyncIterator[SharePointContext]:
+    """Manage SharePoint connection lifecycle."""
+    logger.info("Initializing SharePoint connection...")
 
-# --- REGISTER TOOLS FOR COPILOT ---
-@mcp.tool()
-async def search_sharepoint(query: str) -> str:
-    """Search for documents and content across SharePoint sites."""
-    if not sp_logic: return "Server logic not initialized."
-    return await sp_logic.search(query)
+    try:
+        # Get SharePoint authentication context
+        logger.debug("Attempting to get authentication context...")
+        context = await get_auth_context()
+        logger.info(f"Authentication successful. Token expiry: {context.token_expiry}")
 
-@mcp.tool()
-async def list_sites() -> str:
-    """Retrieve all accessible SharePoint sites."""
-    if not sp_logic: return "Server logic not initialized."
-    return await sp_logic.get_sites()
+        # Yield context for use in the application
+        yield context
 
-@mcp.tool()
-async def get_file_content(drive_id: str, file_id: str) -> str:
-    """Read content from SharePoint files (PDF, DOCX, XLSX)."""
-    if not sp_logic: return "Server logic not initialized."
-    return await sp_logic.get_file(drive_id, file_id)
+    except Exception as e:
+        logger.error(f"Error during SharePoint authentication: {e}")
 
-# --- EXPORT FOR AZURE ---
-# This 'app' is what Uvicorn will serve on port 8000
-app = mcp.get_asgi_app()
+        # Create error context
+        error_context = SharePointContext(
+            access_token="error",
+            token_expiry=datetime.now() + timedelta(seconds=10),  # Short expiry
+            graph_url="https://graph.microsoft.com/v1.0",
+        )
+
+        logger.warning("Using error context due to authentication failure")
+        yield error_context
+
+    finally:
+        logger.info("Ending SharePoint connection...")
+
+
+# Create MCP server at module level so CLI can find it
+mcp = FastMCP(APP_NAME, lifespan=sharepoint_lifespan)
+
+# Register tools
+register_site_tools(mcp)
 
 if __name__ == "__main__":
-    # Local debugging
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Serve MCP over HTTP instead of stdio
+    # Default bind (per SDK) is http://0.0.0.0:8000/mcp inside the container
+    mcp.run(transport="streamable-http")
