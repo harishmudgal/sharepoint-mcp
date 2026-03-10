@@ -1,87 +1,29 @@
 """Main implementation of the SharePoint MCP Server."""
+import os
+from fastmcp import FastMCP
+from dotenv import load_dotenv
 
-import sys
-import logging
-from contextlib import asynccontextmanager
-from collections.abc import AsyncIterator
-from datetime import datetime, timedelta
+# Load your SharePoint credentials from .env
+load_dotenv()
 
-from mcp.server.fastmcp import FastMCP
-
-from auth.sharepoint_auth import SharePointContext, get_auth_context
-from config.settings import APP_NAME, DEBUG
-from tools.site_tools import register_site_tools
-
-# Set logging level
-logging_level = logging.DEBUG if DEBUG else logging.INFO
-logging.basicConfig(
-    level=logging_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+# Initialize FastMCP - this replaces the old mcp.server.Server
+mcp = FastMCP(
+    "SharePoint-MCP",
+    dependencies=["msal", "httpx", "pandas", "python-docx", "PyPDF2", "openpyxl"]
 )
-logger = logging.getLogger("sharepoint_mcp")
 
-
-@asynccontextmanager
-async def sharepoint_lifespan(server: FastMCP) -> AsyncIterator[SharePointContext]:
-    """Manage SharePoint connection lifecycle."""
-    logger.info("Initializing SharePoint connection...")
-
-    try:
-        # Get SharePoint authentication context
-        logger.debug("Attempting to get authentication context...")
-        context = await get_auth_context()
-        logger.info(f"Authentication successful. Token expiry: {context.token_expiry}")
-
-        # Yield context for use in the application
-        yield context
-
-    except Exception as e:
-        logger.error(f"Error during SharePoint authentication: {e}")
-
-        # Create error context
-        error_context = SharePointContext(
-            access_token="error",
-            token_expiry=datetime.now() + timedelta(seconds=10),  # Short expiry
-            graph_url="https://graph.microsoft.com/v1.0",
-        )
-
-        logger.warning("Using error context due to authentication failure")
-        yield error_context
-
-    finally:
-        logger.info("Ending SharePoint connection...")
-
-
-# Create MCP server at module level so CLI can find it
-mcp = FastMCP(APP_NAME, lifespan=sharepoint_lifespan)
-
-# Register tools
-register_site_tools(mcp)
-
-
-#def main():
-#    """Main entry point for the SharePoint MCP server."""
-#    try:
-#        logger.info(f"Starting {APP_NAME} server...")
-#        mcp.run()
-#    except Exception as e:
-#        logger.error(f"Error occurred during MCP server startup: {e}")
-#        raise
-
-
-# Main execution
-#if __name__ == "__main__":
-#    try:
-#        main()
-#    except Exception as e:
-#        logger.error(f"Fatal error in SharePoint MCP server: {e}")
-#        sys.exit(1)
-
-
-# ... (keep all the existing tool definitions like @mcp.tool) ...
+# Move your existing tool functions here and use the @mcp.tool decorator
+@mcp.tool()
+async def search_sharepoint(query: str) -> str:
+    """Search for documents and files in SharePoint."""
+    # Insert your original search logic here
+    return f"Results for {query}"
 
 if __name__ == "__main__":
-    # This enables the HTTP/SSE endpoint required by Azure & Copilot
-    mcp.run(transport='http', host='0.0.0.0', port=8000)
+    # Setting transport to "http" or leaving default uses Streamable HTTP
+    # This will host the endpoint at http://0.0.0.0 by default
+    mcp.run(transport="http")
+
 
 
 
