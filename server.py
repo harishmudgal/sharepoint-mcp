@@ -58,14 +58,14 @@ mcp = FastMCP(APP_NAME, lifespan=sharepoint_lifespan)
 register_site_tools(mcp)
 
 
-def main():
-    """Main entry point for the SharePoint MCP server."""
-    try:
-        logger.info(f"Starting {APP_NAME} server...")
-        mcp.run()
-    except Exception as e:
-        logger.error(f"Error occurred during MCP server startup: {e}")
-        raise
+#def main():
+#    """Main entry point for the SharePoint MCP server."""
+#    try:
+#        logger.info(f"Starting {APP_NAME} server...")
+#        mcp.run()
+#    except Exception as e:
+#        logger.error(f"Error occurred during MCP server startup: {e}")
+#        raise
 
 
 # Main execution
@@ -82,5 +82,6 @@ def main():
 if __name__ == "__main__":
     # This enables the HTTP/SSE endpoint required by Azure & Copilot
     mcp.run(transport='sse', host='0.0.0.0', port=8000)
+
 
 
