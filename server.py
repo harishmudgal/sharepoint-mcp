@@ -45,12 +45,15 @@ def main():
     """Main entry point for the SharePoint MCP server."""
     import uvicorn
     import mcp.server.transport_security as ts
-    
-    # Patch MCP SDK's host validation to allow Azure proxy headers
-    ts.ALLOWED_HOSTS = ["*"]
-    
+
+    # Patch MCP SDK host validation for Azure Container Apps proxy
+    if hasattr(ts, 'ALLOWED_HOSTS'):
+        ts.ALLOWED_HOSTS = ["*"]
+    if hasattr(ts, 'is_valid_host'):
+        ts.is_valid_host = lambda host: True
+
     logger.info(f"Starting {APP_NAME} server...")
-    
+
     uvicorn.run(
         mcp.streamable_http_app(),
         host="0.0.0.0",
@@ -65,6 +68,7 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"Fatal error in SharePoint MCP server: {e}")
         sys.exit(1)
+
 
 
 
