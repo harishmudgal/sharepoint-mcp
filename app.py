@@ -1,12 +1,14 @@
-"""Entry point for container deployment - delegates to server.py"""
+import os
 from server import mcp
+from starlette.applications import Starlette
+from starlette.middleware import Middleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-# Get the ASGI app from FastMCP
 app = mcp.streamable_http_app()
 
-# Allow all hosts (Container App uses dynamic hostnames)
+# Disable host header checking entirely
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["*"]
+    allowed_hosts=["*"],
+    www_redirect=False
 )
