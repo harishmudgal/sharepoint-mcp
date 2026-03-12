@@ -60,4 +60,5 @@ register_site_tools(mcp)
 if __name__ == "__main__":
     # Serve MCP over HTTP instead of stdio
     # Default bind (per SDK) is http://0.0.0.0:8000/mcp inside the container
-    mcp.run(transport="streamable-http")
+    mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
+
