@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 from datetime import datetime, timedelta
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from auth.sharepoint_auth import SharePointContext, get_auth_context
 from config.settings import APP_NAME, DEBUG
 from tools.site_tools import register_site_tools
@@ -45,6 +46,7 @@ def main():
     """Main entry point for the SharePoint MCP server."""
     import uvicorn
     import mcp.server.transport_security as ts
+    
 
     # Patch MCP SDK host validation for Azure Container Apps proxy
     if hasattr(ts, 'ALLOWED_HOSTS'):
@@ -68,6 +70,7 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"Fatal error in SharePoint MCP server: {e}")
         sys.exit(1)
+
 
 
 
