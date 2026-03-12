@@ -1,3 +1,4 @@
+"""ASGI entry point for container deployment."""
 import uvicorn
 import os
 from starlette.applications import Starlette
@@ -9,12 +10,11 @@ from server import mcp
 async def health(request: Request):
     return JSONResponse({"status": "ok"})
 
-# Get the MCP ASGI app — bypasses any host checking
 mcp_app = mcp.streamable_http_app()
 
 app = Starlette(routes=[
     Route("/health", health),
-    Mount("/mcp", app=mcp_app),
+    Mount("/", app=mcp_app),  # ← changed from "/mcp" to "/"
 ])
 
 if __name__ == "__main__":
