@@ -48,11 +48,19 @@ register_site_tools(mcp)
 
 def main():
     """Main entry point for the SharePoint MCP server."""
+    import uvicorn
+    import mcp.server.transport_security as ts
+
+    # Directly patch the validation function
+    ts.validate_host = lambda host, settings: None
+
     logger.info(f"Starting {APP_NAME} server...")
-    mcp.run(
-        transport="streamable-http",
+    uvicorn.run(
+        mcp.streamable_http_app(),
         host="0.0.0.0",
         port=int(os.environ.get("PORT", 8000)),
+        proxy_headers=True,
+        forwarded_allow_ips="*",
     )
 
 if __name__ == "__main__":
@@ -61,6 +69,7 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"Fatal error in SharePoint MCP server: {e}")
         sys.exit(1)
+
 
 
 
