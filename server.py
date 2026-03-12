@@ -1,6 +1,5 @@
 """Main implementation of the SharePoint MCP Server."""
 import sys
-import os                          # ← ADD THIS
 import logging
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
@@ -10,6 +9,7 @@ from auth.sharepoint_auth import SharePointContext, get_auth_context
 from config.settings import APP_NAME, DEBUG
 from tools.site_tools import register_site_tools
 
+# Set logging level
 logging_level = logging.DEBUG if DEBUG else logging.INFO
 logging.basicConfig(
     level=logging_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -44,31 +44,10 @@ def main():
     """Main entry point for the SharePoint MCP server."""
     try:
         logger.info(f"Starting {APP_NAME} server...")
-        mcp.run(
-            transport="streamable-http",
-            uvicorn_kwargs={
-                "host": "0.0.0.0",
-                "port": int(os.environ.get("PORT", 8000)),
-                "proxy_headers": True,
-                "forwarded_allow_ips": "*",
-            }
-        )
-    except TypeError:
-        # Fallback: run uvicorn directly if FastMCP doesn't support uvicorn_kwargs
-        logger.warning("uvicorn_kwargs not supported, falling back to direct uvicorn...")
-        import uvicorn
-        asgi_app = mcp.streamable_http_app()
-        uvicorn.run(
-            asgi_app,
-            host="0.0.0.0",
-            port=int(os.environ.get("PORT", 8000)),
-            proxy_headers=True,
-            forwarded_allow_ips="*",
-        )
+        mcp.run(transport="streamable-http")
     except Exception as e:
         logger.error(f"Error occurred during MCP server startup: {e}")
         raise
-
 
 if __name__ == "__main__":
     try:
