@@ -44,11 +44,11 @@ def main():
     """Main entry point for the SharePoint MCP server."""
     try:
         logger.info(f"Starting {APP_NAME} server...")
-        mcp.run(                                        # ← CHANGE mcp.run()
+        mcp.run(                                        
             transport="streamable-http",
-            host="0.0.0.0",
-            port=int(os.environ.get("PORT", 8000)),
             uvicorn_kwargs={
+                "host": "0.0.0.0",
+                "port": int(os.environ.get("PORT", 8000)),
                 "proxy_headers": True,
                 "forwarded_allow_ips": "*",
             }
@@ -63,3 +63,4 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"Fatal error in SharePoint MCP server: {e}")
         sys.exit(1)
+
