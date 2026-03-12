@@ -1,16 +1,16 @@
 """Main implementation of the SharePoint MCP Server."""
 import sys
-import os   # ← must be here at top
+import os
 import logging
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 from datetime import datetime, timedelta
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from auth.sharepoint_auth import SharePointContext, get_auth_context
 from config.settings import APP_NAME, DEBUG
 from tools.site_tools import register_site_tools
 
-# Set logging level
 logging_level = logging.DEBUG if DEBUG else logging.INFO
 logging.basicConfig(
     level=logging_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -41,19 +41,16 @@ async def sharepoint_lifespan(server: FastMCP) -> AsyncIterator[SharePointContex
 mcp = FastMCP(
     APP_NAME,
     lifespan=sharepoint_lifespan,
-    stateless_http=True,
-    json_response=True,
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=False
+    )
 )
+
 register_site_tools(mcp)
 
 def main():
     """Main entry point for the SharePoint MCP server."""
     import uvicorn
-    import mcp.server.transport_security as ts
-
-    # Directly patch the validation function
-    ts.validate_host = lambda host, settings: None
-
     logger.info(f"Starting {APP_NAME} server...")
     uvicorn.run(
         mcp.streamable_http_app(),
@@ -69,10 +66,3 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"Fatal error in SharePoint MCP server: {e}")
         sys.exit(1)
-
-
-
-
-
-
-
