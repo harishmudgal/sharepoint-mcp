@@ -1,17 +1,17 @@
 # MCP Core & Transport
-mcp>=1.10.0
-fastmcp>=2.8.0
-uvicorn>=0.34.3
-starlette>=0.47.0
-python-dotenv>=1.1.0
+mcp[cli]>=1.6.0
+fastmcp>=2.3.0
+uvicorn[standard]>=0.29.0
+starlette>=0.37.0
+python-dotenv>=1.0.0
 
 # SharePoint & Auth
-msal
-httpx
+msal>=1.28.0
+httpx>=0.27.0
 
 # Data Processing & Parsing
-beautifulsoup4
-pandas
-python-docx
-PyPDF2
-openpyxl
+beautifulsoup4>=4.12.0
+pandas>=2.0.0
+python-docx>=1.1.0
+PyPDF2>=3.0.0
+openpyxl>=3.1.0
