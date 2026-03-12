@@ -44,9 +44,17 @@ register_site_tools(mcp)
 def main():
     """Main entry point for the SharePoint MCP server."""
     import uvicorn
+    from starlette.middleware.trustedhost import TrustedHostMiddleware
+    
     logger.info(f"Starting {APP_NAME} server...")
-    uvicorn.run(
+    
+    asgi_app = TrustedHostMiddleware(
         mcp.streamable_http_app(),
+        allowed_hosts=["*"]   # ← accept any host header
+    )
+    
+    uvicorn.run(
+        asgi_app,
         host="0.0.0.0",
         port=int(os.environ.get("PORT", 8000)),
         proxy_headers=True,
@@ -59,4 +67,5 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"Fatal error in SharePoint MCP server: {e}")
         sys.exit(1)
+
 
