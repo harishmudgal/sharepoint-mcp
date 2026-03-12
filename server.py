@@ -60,12 +60,15 @@ register_site_tools(mcp)
 
 def main():
     """Main entry point for the SharePoint MCP server."""
-    try:
-        logger.info(f"Starting {APP_NAME} server...")
-        mcp.run()
-    except Exception as e:
-        logger.error(f"Error occurred during MCP server startup: {e}")
-        raise
+    import uvicorn
+    logger.info(f"Starting {APP_NAME} server...")
+    uvicorn.run(
+        mcp.streamable_http_app(),
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 8000)),
+        proxy_headers=True,
+        forwarded_allow_ips="*",
+    )
 
 
 # Main execution
@@ -75,3 +78,4 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"Fatal error in SharePoint MCP server: {e}")
         sys.exit(1)
+
