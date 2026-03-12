@@ -38,9 +38,12 @@ async def sharepoint_lifespan(server: FastMCP) -> AsyncIterator[SharePointContex
     finally:
         logger.info("Ending SharePoint connection...")
 
+
 mcp = FastMCP(
     APP_NAME,
     lifespan=sharepoint_lifespan,
+    json_response=True,              # ← forces JSON, no SSE requirement
+    stateless_http=True,             # ← no session state needed
     transport_security=TransportSecuritySettings(
         enable_dns_rebinding_protection=False
     )
@@ -66,3 +69,4 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"Fatal error in SharePoint MCP server: {e}")
         sys.exit(1)
+
