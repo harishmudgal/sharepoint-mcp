@@ -6,7 +6,6 @@ from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 from datetime import datetime, timedelta
 from mcp.server.fastmcp import FastMCP
-from mcp.server.transport_security import TransportSecuritySettings
 from auth.sharepoint_auth import SharePointContext, get_auth_context
 from config.settings import APP_NAME, DEBUG
 from tools.site_tools import register_site_tools
@@ -39,29 +38,21 @@ async def sharepoint_lifespan(server: FastMCP) -> AsyncIterator[SharePointContex
     finally:
         logger.info("Ending SharePoint connection...")
 
-mcp = FastMCP(APP_NAME, lifespan=sharepoint_lifespan)
+mcp = FastMCP(
+    APP_NAME,
+    lifespan=sharepoint_lifespan,
+    stateless_http=True,
+    json_response=True,
+)
 register_site_tools(mcp)
 
 def main():
     """Main entry point for the SharePoint MCP server."""
-    import uvicorn
-    import mcp.server.transport_security as ts
-    
-
-    # Patch MCP SDK host validation for Azure Container Apps proxy
-    if hasattr(ts, 'ALLOWED_HOSTS'):
-        ts.ALLOWED_HOSTS = ["*"]
-    if hasattr(ts, 'is_valid_host'):
-        ts.is_valid_host = lambda host: True
-
     logger.info(f"Starting {APP_NAME} server...")
-
-    uvicorn.run(
-        mcp.streamable_http_app(),
+    mcp.run(
+        transport="streamable-http",
         host="0.0.0.0",
         port=int(os.environ.get("PORT", 8000)),
-        proxy_headers=True,
-        forwarded_allow_ips="*",
     )
 
 if __name__ == "__main__":
@@ -70,6 +61,7 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"Fatal error in SharePoint MCP server: {e}")
         sys.exit(1)
+
 
 
 
